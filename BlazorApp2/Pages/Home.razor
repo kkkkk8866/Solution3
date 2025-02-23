@@ -1,0 +1,121 @@
+﻿@page "/"
+
+
+@using System.Collections.Generic
+@inject IJSRuntime JS
+
+<h3>Conversor y Evaluador de Expresiones</h3>
+
+<div>
+    <label for="infixExpression">Expresión Infija:</label>
+    <input @bind="infixExpression" id="infixExpression" />
+    <button @onclick="ConvertToPostfix">Convertir a Postfijo</button>
+    <button @onclick="EvaluatePostfix">Evaluar Postfijo</button>
+</div>
+
+@if (!string.IsNullOrEmpty(postfixExpression))
+{
+    <div>
+        <h4>Notación Postfija:</h4>
+        <p>@postfixExpression</p>
+    </div>
+}
+
+@if (result != null)
+{
+    <div>
+        <h4>Resultado de la expresión:</h4>
+        <p>@result</p>
+    </div>
+}
+
+@code {
+    private string infixExpression = string.Empty;
+    private string postfixExpression = string.Empty;
+    private double? result = null;
+
+    private static int GetPrecedence(char op)
+    {
+        return op switch
+        {
+            '+' or '-' => 1,
+            '*' or '/' => 2,
+            _ => 0
+        };
+    }
+
+    private void ConvertToPostfix()
+    {
+        if (string.IsNullOrEmpty(infixExpression)) return;
+
+        Stack<char> stack = new();
+        postfixExpression = string.Empty;
+
+        foreach (char c in infixExpression.Replace(" ", ""))
+        {
+            if (char.IsLetterOrDigit(c))
+            {
+                postfixExpression += c;
+            }
+            else if (c == '(')
+            {
+                stack.Push(c);
+            }
+            else if (c == ')')
+            {
+                while (stack.Count > 0 && stack.Peek() != '(')
+                {
+                    postfixExpression += stack.Pop();
+                }
+                stack.Pop(); 
+            }
+            else 
+            {
+                while (stack.Count > 0 && GetPrecedence(c) <= GetPrecedence(stack.Peek()))
+                {
+                    postfixExpression += stack.Pop();
+                }
+                stack.Push(c);
+            }
+        }
+
+        while (stack.Count > 0)
+        {
+            postfixExpression += stack.Pop();
+        }
+    }
+
+    private void EvaluatePostfix()
+    {
+        if (string.IsNullOrEmpty(postfixExpression)) return;
+
+        Stack<double> stack = new();
+
+        foreach (char c in postfixExpression)
+        {
+            if (char.IsDigit(c))
+            {
+                stack.Push(char.GetNumericValue(c));
+            }
+            else
+            {
+                double operand2 = stack.Pop();
+                double operand1 = stack.Pop();
+                double value = c switch
+                {
+                    '+' => operand1 + operand2,
+                    '-' => operand1 - operand2,
+                    '*' => operand1 * operand2,
+                    '/' => operand1 / operand2,
+                    _ => throw new InvalidOperationException("Operador no válido")
+                };
+                stack.Push(value);
+            }
+        }
+
+        result = stack.Pop();
+    }
+}
+
+<!-- La solución ahora evalúa correctamente la expresión postfija -->
+
